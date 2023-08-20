@@ -7,18 +7,16 @@ import Map, {
   Popup,
   Source,
   Layer,
-  MapMouseEvent,
   MapLayerMouseEvent,
   MapRef,
 } from "react-map-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { MapboxLayers } from "@/components/MapboxLayers";
 import type { FeatureCollection, Feature, GeoJSON } from "geojson";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import bbox from "@turf/bbox";
-
-import { Editor, DrawPolygonMode } from "react-map-gl-draw";
-
+import { DrawControl } from "@/components/DrawControl";
+import MapboxDraw, { DrawFeature } from "mapbox__mapbox-gl-draw";
 export interface HoverInfoProps {
   longitude: number;
   latitude: number;
@@ -27,7 +25,7 @@ export interface HoverInfoProps {
 
 export const MapContainer = () => {
   const mapRef = useRef<MapRef | null>(null);
-  const [selectedCounty, setSelectedCounty] = useState<string>("");
+  const [features, setFeatures] = useState({});
   const [hoverInfo, setHoverInfo] = useState<HoverInfoProps>({
     longitude: 0,
     latitude: 0,
@@ -74,12 +72,41 @@ export const MapContainer = () => {
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetch("/geojson/geoBoundaries-UKR-ADM1.geojson")
       .then((res) => res.json())
       .then((data) => {
         setGeojsonData(data);
       });
+  }, []);
+
+  useEffect(() => {
+    console.log("features", features);
+  }, [features]);
+
+  const onUpdate = useCallback((e: MapboxDraw.DrawUpdateEvent) => {
+    console.log(" useCallback e", e);
+    setFeatures((currFeatures) => {
+      const newFeatures = { ...currFeatures } as FeatureCollection;
+      for (const f of e.features) {
+        newFeatures[f.id] = f;
+      }
+      return newFeatures;
+    });
+  }, []);
+
+  const onDelete = useCallback((e: MapboxDraw.DrawDeleteEvent) => {
+    setFeatures((currFeatures) => {
+      const newFeatures = { ...currFeatures };
+      for (const f of e.features) {
+        delete newFeatures[f.id];
+      }
+      return newFeatures;
+    });
+  }, []);
+
+  const onModeChange = useCallback((e: MapboxDraw.DrawModeChangeEvent) => {
+    console.log("e", e);
   }, []);
 
   return (
@@ -99,8 +126,18 @@ export const MapContainer = () => {
         onClick={onClick}
         interactiveLayerIds={["counties"]}
       >
-       
-
+        <DrawControl
+          position="top-right"
+          displayControlsDefault={false}
+          controls={{
+            polygon: true,
+            trash: true,
+          }}
+          defaultMode="simple_select"
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onModeChange={onModeChange}
+        />
         {geojsonData && (
           <MapboxLayers hoverInfo={hoverInfo} data={geojsonData} />
         )}
