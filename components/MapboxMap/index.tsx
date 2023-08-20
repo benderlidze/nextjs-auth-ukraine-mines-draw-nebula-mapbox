@@ -16,16 +16,23 @@ import type { FeatureCollection, Feature, GeoJSON } from "geojson";
 import { useState, useCallback, useRef, useEffect } from "react";
 import bbox from "@turf/bbox";
 import { DrawControl } from "@/components/DrawControl";
-import MapboxDraw, { DrawFeature } from "mapbox__mapbox-gl-draw";
+import { DrawFeature, DrawPolygon } from "mapbox__mapbox-gl-draw";
+import { SaveDataContainer } from "@/components/SaveData";
 export interface HoverInfoProps {
   longitude: number;
   latitude: number;
   countyName: string;
 }
 
+export interface GeometryCollectionProps {
+  [key: string]: Feature;
+}
+
 export const MapContainer = () => {
   const mapRef = useRef<MapRef | null>(null);
-  const [features, setFeatures] = useState({});
+  const [features, setFeatures] = useState<GeometryCollectionProps>({});
+  const [drawMode, setDrawMode] = useState<string>("simple_select");
+
   const [hoverInfo, setHoverInfo] = useState<HoverInfoProps>({
     longitude: 0,
     latitude: 0,
@@ -53,23 +60,29 @@ export const MapContainer = () => {
     const props =
       event.features && event.features[0] && event.features[0].properties;
 
-    if (props && geojsonData) {
-      const countyPolygon = geojsonData.features.find(
-        (d) => d.properties && d.properties.shapeName === props.shapeName
-      ) as Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>;
+    // if (drawMode === "draw_polygon") return;
 
-      // calculate the bounding box of the feature
-      const [minLng, minLat, maxLng, maxLat] = bbox(countyPolygon);
+    // zoom to region
+    // if (props && geojsonData) {
+    //   if (!mapRef.current) return;
+    //   const zoom = mapRef.current.getZoom();
+    //   if (zoom > 7) return;
 
-      mapRef.current &&
-        mapRef.current.fitBounds(
-          [
-            [minLng, minLat],
-            [maxLng, maxLat],
-          ],
-          { padding: 40, duration: 1000 }
-        );
-    }
+    //   const countyPolygon = geojsonData.features.find(
+    //     (d) => d.properties && d.properties.shapeName === props.shapeName
+    //   ) as Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>;
+
+    //   const [minLng, minLat, maxLng, maxLat] = bbox(countyPolygon);
+
+    //   mapRef.current &&
+    //     mapRef.current.fitBounds(
+    //       [
+    //         [minLng, minLat],
+    //         [maxLng, maxLat],
+    //       ],
+    //       { padding: 40, duration: 1000 }
+    //     );
+    // }
   };
 
   useEffect(() => {
@@ -84,12 +97,16 @@ export const MapContainer = () => {
     console.log("features", features);
   }, [features]);
 
+  useEffect(() => {
+    console.log("drawMode", drawMode);
+  }, [drawMode]);
+
   const onUpdate = useCallback((e: MapboxDraw.DrawUpdateEvent) => {
-    console.log(" useCallback e", e);
+    console.log("e", e);
     setFeatures((currFeatures) => {
-      const newFeatures = { ...currFeatures } as FeatureCollection;
+      const newFeatures = { ...currFeatures };
       for (const f of e.features) {
-        newFeatures[f.id] = f;
+        f.id && (newFeatures[f.id] = f);
       }
       return newFeatures;
     });
@@ -99,18 +116,21 @@ export const MapContainer = () => {
     setFeatures((currFeatures) => {
       const newFeatures = { ...currFeatures };
       for (const f of e.features) {
-        delete newFeatures[f.id];
+        delete newFeatures[f.id as string];
       }
       return newFeatures;
     });
   }, []);
 
   const onModeChange = useCallback((e: MapboxDraw.DrawModeChangeEvent) => {
-    console.log("e", e);
+    const mode = e.mode;
+    setDrawMode(mode);
   }, []);
 
   return (
     <div>
+      <SaveDataContainer data={features} />
+
       <Map
         ref={mapRef}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_KEY}
@@ -134,6 +154,7 @@ export const MapContainer = () => {
             trash: true,
           }}
           defaultMode="simple_select"
+          onCreate={onUpdate}
           onUpdate={onUpdate}
           onDelete={onDelete}
           onModeChange={onModeChange}

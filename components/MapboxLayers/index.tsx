@@ -10,7 +10,7 @@ export const countiesLayer: FillLayer = {
   source: "counties",
   paint: {
     "fill-outline-color": "rgba(0,0,0,0.1)",
-    "fill-color": "rgba(0,0,0,0.1)",
+    "fill-color": "rgba(0,0,0,0)",
   },
 };
 // Highlighted county polygons
