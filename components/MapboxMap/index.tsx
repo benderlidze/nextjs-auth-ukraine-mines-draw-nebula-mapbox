@@ -199,21 +199,6 @@ export const MapContainer = () => {
         onClick={onClick}
         interactiveLayerIds={["counties"]}
       >
-        {/* <DrawControl
-          drawRef={drawRef}
-          position="top-right"
-          displayControlsDefault={false}
-          controls={{
-            polygon: true,
-            trash: true,
-          }}
-          defaultMode="simple_select"
-          onCreate={onUpdate}
-          onUpdate={onUpdate}
-          onDelete={onDelete}
-          onModeChange={onModeChange}
-        /> */}
-
         <DrawControl
           ref={drawRef}
           position="top-right"
@@ -232,6 +217,7 @@ export const MapContainer = () => {
         {geojsonData && (
           <MapboxLayers hoverInfo={hoverInfo} data={geojsonData} />
         )}
+
         <GeolocateControl position="top-left" />
         <NavigationControl position="top-left" />
         <ScaleControl />

@@ -31,6 +31,7 @@ export const DrawControl = React.forwardRef<MapboxDraw, DrawControlProps>(
         onUpdate && map.on("draw.update", onUpdate);
         onDelete && map.on("draw.delete", onDelete);
         onModeChange && map.on("draw.modechange", onModeChange);
+        
       },
       ({ map }) => {
         onCreate && map.off("draw.create", onCreate);
