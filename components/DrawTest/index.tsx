@@ -7,8 +7,6 @@ import MapboxDraw, {
 import { useControl } from "react-map-gl";
 import type { ControlPosition } from "react-map-gl";
 import { Feature } from "geojson";
-//@mapbox/mapbox-gl-draw css
-import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 
 export type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
   position?: ControlPosition;
@@ -42,8 +40,59 @@ export const DrawControl = React.forwardRef<MapboxDraw, DrawControlProps>(
         position,
       }
     );
+
     // forwarding the Draw Ref external
     React.useImperativeHandle(ref, () => drawRef, [drawRef]);
+
     return null;
   }
 );
+
+// --------------------------------------------------------------------------------------------------------
+
+export const Draw = () => {
+  const { current: map } = useMap();
+  const [drawMode, setDrawMode] = React.useState<DrawMode>("simple_select");
+  const drawRef = React.useRef<MapboxDraw>(null);
+
+  if (!map) {
+    return null;
+  }
+
+  React.useEffect(() => {
+    // it's ok here, drawRef is not undefined
+    console.log("useEffect drawRef when app is loading", drawRef);
+  }, [drawRef]);
+
+  const onCreateOrUpdate = React.useCallback(
+    (e: { features: Feature[] }) => {
+      // Here drawRef would not be undefined
+      console.log("drawRef under onCreateOrUpdate method", drawRef);
+    },
+    [drawRef]
+  );
+
+  console.log("Component Render: ", drawMode);
+
+  const onDelete = React.useCallback((e) => {
+    console.log(e.features);
+  }, []);
+
+  return (
+    <DrawControl
+      ref={drawRef}
+      position="top-right"
+      displayControlsDefault={false}
+      controls={{
+        polygon: true,
+        trash: true,
+      }}
+      defaultMode="simple_select"
+      modes={{ ...MapboxDraw.modes }}
+      onCreate={onCreateOrUpdate}
+      onUpdate={onCreateOrUpdate}
+      onDelete={onDelete}
+      onModeChange={({ mode }) => setDrawMode(mode)}
+    />
+  );
+};

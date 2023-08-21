@@ -30,6 +30,10 @@ export interface GeometryCollectionProps {
 
 export const MapContainer = () => {
   const mapRef = useRef<MapRef | null>(null);
+  const drawRef = useRef<MapboxDraw>(null);
+  const [savedGeometry, setSavedGeometry] = useState<GeometryCollectionProps>(
+    {}
+  );
   const [features, setFeatures] = useState<GeometryCollectionProps>({});
   const [drawMode, setDrawMode] = useState<string>("simple_select");
 
@@ -61,20 +65,15 @@ export const MapContainer = () => {
       event.features && event.features[0] && event.features[0].properties;
 
     // if (drawMode === "draw_polygon") return;
-
     // zoom to region
     // if (props && geojsonData) {
     //   if (!mapRef.current) return;
     //   const zoom = mapRef.current.getZoom();
     //   if (zoom > 7) return;
-
     //   const countyPolygon = geojsonData.features.find(
     //     (d) => d.properties && d.properties.shapeName === props.shapeName
     //   ) as Feature<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>;
-
     //   const [minLng, minLat, maxLng, maxLat] = bbox(countyPolygon);
-
-    //   mapRef.current &&
     //     mapRef.current.fitBounds(
     //       [
     //         [minLng, minLat],
@@ -84,6 +83,29 @@ export const MapContainer = () => {
     //     );
     // }
   };
+
+  const fetchAllData = async () => {
+    const resp = await fetch("/api/load-all-data", {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+    const dataFromDB = await resp.json();
+
+    if (dataFromDB && dataFromDB.length > 0) {
+      const geometry = dataFromDB.map((d: any) => {
+        return {
+          ...d,
+          properties: JSON.parse(d.properties),
+        };
+      });
+      console.log("geometry========>", geometry);
+      setSavedGeometry(geometry);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
 
   useEffect(() => {
     fetch("/geojson/geoBoundaries-UKR-ADM1.geojson")
@@ -112,7 +134,44 @@ export const MapContainer = () => {
     });
   }, []);
 
-  const onDelete = useCallback((e: MapboxDraw.DrawDeleteEvent) => {
+  // const onDelete = useCallback((e: MapboxDraw.DrawDeleteEvent) => {
+  //   setFeatures((currFeatures) => {
+  //     const newFeatures = { ...currFeatures };
+  //     for (const f of e.features) {
+  //       delete newFeatures[f.id as string];
+  //     }
+  //     return newFeatures;
+  //   });
+  // }, []);
+
+  const onModeChange = useCallback((e: MapboxDraw.DrawModeChangeEvent) => {
+    const mode = e.mode;
+    setDrawMode(mode);
+  }, []);
+
+  useEffect(() => {
+    // it's ok here, drawRef is not undefined
+    console.log("useEffect drawRef when app is loading", drawRef);
+  }, [drawRef]);
+
+  const onCreateOrUpdate = React.useCallback(
+    (e: { features: Feature[] }) => {
+      setFeatures((currFeatures) => {
+        const newFeatures = { ...currFeatures };
+        for (const f of e.features) {
+          f.id && (newFeatures[f.id] = f);
+        }
+        return newFeatures;
+      });
+      // Here drawRef would not be undefined
+      console.log("drawRef under onCreateOrUpdate method", drawRef);
+    },
+    [drawRef]
+  );
+
+  console.log("Component Render: ", drawMode);
+
+  const onDelete = React.useCallback((e: { features: Feature[] }) => {
     setFeatures((currFeatures) => {
       const newFeatures = { ...currFeatures };
       for (const f of e.features) {
@@ -122,15 +181,9 @@ export const MapContainer = () => {
     });
   }, []);
 
-  const onModeChange = useCallback((e: MapboxDraw.DrawModeChangeEvent) => {
-    const mode = e.mode;
-    setDrawMode(mode);
-  }, []);
-
   return (
     <div>
       <SaveDataContainer data={features} />
-
       <Map
         ref={mapRef}
         mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_API_KEY}
@@ -146,7 +199,8 @@ export const MapContainer = () => {
         onClick={onClick}
         interactiveLayerIds={["counties"]}
       >
-        <DrawControl
+        {/* <DrawControl
+          drawRef={drawRef}
           position="top-right"
           displayControlsDefault={false}
           controls={{
@@ -158,7 +212,23 @@ export const MapContainer = () => {
           onUpdate={onUpdate}
           onDelete={onDelete}
           onModeChange={onModeChange}
+        /> */}
+
+        <DrawControl
+          ref={drawRef}
+          position="top-right"
+          displayControlsDefault={false}
+          controls={{
+            polygon: true,
+            trash: true,
+          }}
+          defaultMode="simple_select"
+          onCreate={onCreateOrUpdate}
+          onUpdate={onCreateOrUpdate}
+          onDelete={onDelete}
+          onModeChange={({ mode }) => setDrawMode(mode)}
         />
+
         {geojsonData && (
           <MapboxLayers hoverInfo={hoverInfo} data={geojsonData} />
         )}

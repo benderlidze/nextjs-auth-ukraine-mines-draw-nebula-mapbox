@@ -24,12 +24,12 @@ export const highlightLayer: LineLayer = {
   },
 };
 
-interface MapboxLayersProps {
+interface ViewMapLayersProps {
   hoverInfo: HoverInfoProps;
   data: FeatureCollection<GeoJSON.Geometry, GeoJSON.GeoJsonProperties>;
 }
 
-export const MapboxLayers = ({ hoverInfo, data }: MapboxLayersProps) => {
+export const ViewMapLayers = ({ hoverInfo, data }: ViewMapLayersProps) => {
   const filter = React.useMemo(
     () => ["==", ["get", "shapeName"], hoverInfo.countyName || null],
     [hoverInfo]
