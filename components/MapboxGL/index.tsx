@@ -131,7 +131,15 @@ export function MapboxGLMap(): JSX.Element {
     if (!drawRef.current) return;
     const draw = drawRef.current;
 
-    const geometry = draw.getAll();
+    const drawData = draw.getAll();
+    //remove id from features
+    const geometry = drawData.features.map(({ id, ...rest }) => {
+      return {
+        ...rest,
+      };
+    });
+
+    console.log("geometry", geometry);
 
     const postData = {
       id: projectId,
