@@ -1,3 +1,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+body,
+html {
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 20px;
+  color: rgb(100, 106, 150);
+}

@@ -445,40 +445,6 @@ export function MapboxGLMap(): JSX.Element {
           boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 20px",
           backgroundColor: "#f5f5fb",
         }}
-        className="absolute flex gap-5 top-[10px] left-[10px] z-10 bg-white p-[20px] flex-col"
-      >
-        {projectList && (
-          <ProjectSelector data={projectList} onSelect={handleProjectSelect} />
-        )}
-
-        {projectList && projectId && (
-          <ProjectInfo
-            project={projectList.find((project) => project.id === projectId)!}
-          />
-        )}
-
-        {polygonData && polygonData?.id && (
-          <PolygonInfoBox
-            polygonData={polygonData}
-            hazardTypes={hazardTypes}
-            statusTypes={statusType}
-            updatePolygonData={updateProjectPolygonData}
-          />
-        )}
-
-        <button
-          className="bg-white p-2 border border-solid border-gray-300"
-          onClick={handleSaveProject}
-        >
-          Save project
-        </button>
-      </div>
-
-      <div
-        style={{
-          boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 20px",
-          backgroundColor: "#f5f5fb",
-        }}
         className="absolute bottom-[10px] left-[10px] z-10 bg-white p-[20px]"
       >
         <div className="m-[10px]">
@@ -557,10 +523,54 @@ export function MapboxGLMap(): JSX.Element {
       </div>
 
       <div
-        style={{ width: "100vw", height: "100vh" }}
-        ref={mapContainerRef}
-        className="map-container"
-      />
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          width: "100vw",
+          border: "0px solid red",
+          backgroundColor: "#f5f5fb",
+        }}
+      >
+        <div
+          style={{ flex: " 1 0", height: "100vh" }}
+          ref={mapContainerRef}
+          className="map-container"
+        />
+        <div style={{ width: "300px" }}>
+          <div className="flex gap-5 p-4 flex-col">
+            {projectList && (
+              <ProjectSelector
+                data={projectList}
+                onSelect={handleProjectSelect}
+              />
+            )}
+
+            {projectList && projectId && (
+              <ProjectInfo
+                project={
+                  projectList.find((project) => project.id === projectId)!
+                }
+              />
+            )}
+
+            {polygonData && polygonData?.id && (
+              <PolygonInfoBox
+                polygonData={polygonData}
+                hazardTypes={hazardTypes}
+                statusTypes={statusType}
+                updatePolygonData={updateProjectPolygonData}
+              />
+            )}
+
+            <button
+              className="bg-white p-2 border border-solid border-gray-300"
+              onClick={handleSaveProject}
+            >
+              Save project
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

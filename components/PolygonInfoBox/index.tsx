@@ -16,6 +16,7 @@ export interface PolygonData {
   id: number;
   hazard_type_id: number;
   status_id: number;
+  description: string;
 }
 
 export const PolygonInfoBox = ({
@@ -30,7 +31,22 @@ export const PolygonInfoBox = ({
   return (
     <div>
       <h1>Polygon Info</h1>
-      <p>Hazard Type: {polygonData?.hazard_type_id}</p>
+      Description:
+      <textarea
+        className="block w-full p-2 border rounded shadow-sm focus:outline-none focus:ring focus:border-blue-300"
+        name="description"
+        id="description"
+        value={polygonData?.description || ""}
+        onInput={(e) => {
+          const description = e.target.value;
+          updatePolygonData({
+            polygonId: polygonData?.id,
+            polygonPropName: "description",
+            value: description,
+          });
+        }}
+      />
+      <p>Hazard Type:</p>
       <select
         className="block w-full p-2 border rounded shadow-sm focus:outline-none focus:ring focus:border-blue-300"
         name="hazard_type"
@@ -54,9 +70,7 @@ export const PolygonInfoBox = ({
           </option>
         ))}
       </select>
-
-      <p>Status: {polygonData?.status_id}</p>
-
+      <p>Status:</p>
       <select
         className="block w-full p-2 border rounded shadow-sm focus:outline-none focus:ring focus:border-blue-300"
         name="status_type"
