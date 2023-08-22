@@ -34,6 +34,9 @@ export function MapboxGLMap(): JSX.Element {
     {} as ProjectData
   );
 
+  const [regionsChecked, setRegionsChecked] = useState(true);
+  const [districtsChecked, setDistrictsChecked] = useState(true);
+
   useEffect(() => {
     mapboxgl.accessToken =
       "pk.eyJ1IjoiY2NoYW5nc2EiLCJhIjoiY2lqeXU3dGo1MjY1ZXZibHp5cHF2a3Q1ZyJ9.8q-mw77HsgkdqrUHdi-XUg"; // Replace with your Mapbox access token
@@ -74,6 +77,9 @@ export function MapboxGLMap(): JSX.Element {
         type: "fill",
         source: "address__region",
         "source-layer": "address__region",
+        layout: {
+          visibility: "visible",
+        },
         paint: {
           "fill-color": "rgba(200, 100, 240, 0.1)",
           "fill-outline-color": "rgba(200, 100, 240, 1)",
@@ -91,6 +97,9 @@ export function MapboxGLMap(): JSX.Element {
       map.addLayer({
         id: "address__district",
         type: "fill",
+        layout: {
+          visibility: "visible",
+        },
         source: "address__district",
         "source-layer": "address__district",
         paint: {
@@ -155,7 +164,8 @@ export function MapboxGLMap(): JSX.Element {
       params: {
         project: projectData.project,
         objects: {
-          ...geometry,
+          type: "FeatureCollection",
+          features: geometry,
         },
       },
     };
@@ -201,6 +211,27 @@ export function MapboxGLMap(): JSX.Element {
     handleGetProject(+projectId);
   };
 
+  const handleRegionsVisibility = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const checked = e.target.checked;
+    setRegionsChecked(checked);
+    mapRef.current?.setLayoutProperty(
+      "address__region",
+      "visibility",
+      checked ? "visible" : "none"
+    );
+  };
+  const handleDistrictsVisibility = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const checked = e.target.checked;
+    setDistrictsChecked(checked);
+    mapRef.current?.setLayoutProperty(
+      "address__district",
+      "visibility",
+      checked ? "visible" : "none"
+    );
+  };
+
   return (
     <div>
       <div className="absolute flex gap-5 top-[10px] left-[10px] z-10 bg-white p-[20px] flex-col">
@@ -221,6 +252,38 @@ export function MapboxGLMap(): JSX.Element {
           Save project
         </button>
       </div>
+
+      <div className="absolute bottom-[10px] left-[10px] z-10 bg-white p-[20px]">
+        <div className="m-[10px]">
+          <input
+            type="checkbox"
+            id="regions"
+            checked={regionsChecked}
+            onChange={handleRegionsVisibility}
+          />
+          <label
+            htmlFor="regions"
+            className="pl-2 cursor-pointer user-select-none"
+          >
+            Regions
+          </label>
+        </div>
+        <div className="m-[10px]">
+          <input
+            type="checkbox"
+            id="districts"
+            checked={districtsChecked}
+            onChange={handleDistrictsVisibility}
+          />
+          <label
+            htmlFor="districts"
+            className="pl-2 cursor-pointer user-select-none"
+          >
+            Districts
+          </label>
+        </div>
+      </div>
+
       <div
         style={{ width: "100vw", height: "100vh" }}
         ref={mapContainerRef}
