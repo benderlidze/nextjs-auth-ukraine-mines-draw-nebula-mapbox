@@ -32,6 +32,10 @@ export interface HazardType {
   id: number;
   name: string;
 }
+export interface StatusType {
+  id: number;
+  name: string;
+}
 
 export interface UpdatePolygonData {
   polygonId: string;
@@ -57,6 +61,7 @@ export function MapboxGLMap(): JSX.Element {
 
   const [polygonData, setPolygonData] = useState<PolygonData>();
   const [hazardTypes, setHazardTypes] = useState<HazardType[]>([]);
+  const [statusType, setStatusType] = useState<HazardType[]>([]);
 
   useEffect(() => {
     mapboxgl.accessToken =
@@ -301,6 +306,24 @@ export function MapboxGLMap(): JSX.Element {
         console.log("data", data);
         setHazardTypes(data);
       });
+
+    const status = {
+      schema: "data",
+      table: "status",
+      fields: "id, name",
+    };
+    fetch("http://135.181.151.145:8000/get_table_json/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(status),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("data", data);
+        setStatusType(data);
+      });
   };
 
   const handleProjectSelect = (projectId: number) => {
@@ -360,7 +383,7 @@ export function MapboxGLMap(): JSX.Element {
   }: UpdatePolygonData) => {
     if (!polygonData) return;
 
-    console.log(polygonId, polygonPropName, value);
+    console.log("Update polygon data -> ",polygonId, polygonPropName, value);
 
     if (!drawRef.current) return;
     drawRef.current.setFeatureProperty(polygonId, polygonPropName, value);
@@ -405,6 +428,7 @@ export function MapboxGLMap(): JSX.Element {
           <PolygonInfoBox
             polygonData={polygonData}
             hazardTypes={hazardTypes}
+            statusTypes={statusType}
             updatePolygonData={updateProjectPolygonData}
           />
         )}
