@@ -1,15 +1,30 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mapboxgl, { Map } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import bbox from "@turf/bbox";
+import { ProjectSelector } from "../ProjectSelector";
+import { profileEnd } from "console";
+import { ProjectInfo } from "@/components/ProjectInfo";
+
+export interface Project {
+  id: number;
+  uuid: string;
+  name?: string;
+  description?: string;
+  organization_id: number;
+  is_active?: boolean;
+}
 
 export function MapboxGLMap(): JSX.Element {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
+
+  const [projectList, setProjectList] = useState<Project[]>([]);
+  const [projectId, setProjectId] = useState<number | null>(null);
 
   useEffect(() => {
     mapboxgl.accessToken =
@@ -77,18 +92,23 @@ export function MapboxGLMap(): JSX.Element {
       });
     });
 
+    getUserProjects();
+
     return () => {
       map.remove();
     };
   }, []);
 
-  const handleGetProject = async () => {
-    const projectId = 2;
-    console.log("drawRef", drawRef);
+  const handleGetProject = (projectId: number) => {
+    console.log("projectId", projectId, !projectId, !isNaN(projectId));
+    if (!projectId || isNaN(projectId)) return;
 
     fetch(`http://135.181.151.145:8000/get_project/${projectId}/`)
       .then((response) => response.json())
       .then((data) => {
+        if (!drawRef.current) return;
+        drawRef.current.deleteAll(); //clear prev geometry
+
         console.log("data", data);
         const featureCollection = data.objects;
         if (featureCollection && featureCollection.features.length > 0) {
@@ -105,20 +125,19 @@ export function MapboxGLMap(): JSX.Element {
       });
   };
 
-  const handleSaveProject = async () => {
+  const handleSaveProject = () => {
     const projectId = 2;
 
     if (!drawRef.current) return;
     const draw = drawRef.current;
 
     const geometry = draw.getAll();
-    console.log("geometry", geometry);
 
     const postData = {
       id: projectId,
       params: {
         project: {
-          id: 2,
+          id: projectId,
           uuid: "ea24e437-8a3b-4c6a-abb9-b8783a450d4a",
           organization_id: 1,
           name: "Project 2",
@@ -130,6 +149,8 @@ export function MapboxGLMap(): JSX.Element {
         },
       },
     };
+
+    console.log("postData", postData);
 
     fetch("http://135.181.151.145:8000/set_project/", {
       method: "POST",
@@ -144,15 +165,45 @@ export function MapboxGLMap(): JSX.Element {
       });
   };
 
+  const getUserProjects = async () => {
+    const postData = {
+      schema: "data",
+      table: "project",
+      fields: "id, name, uuid,organization_id, description, is_active ",
+    };
+    fetch("http://135.181.151.145:8000/get_table_json/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(postData),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("data", data);
+        setProjectList(data);
+      });
+  };
+
+  const handleProjectSelect = (projectId: number) => {
+    console.log("projectId", projectId);
+    setProjectId(projectId);
+    handleGetProject(+projectId);
+  };
+
   return (
     <div>
-      <div className="absolute flex gap-5 top-[10px] left-[10px] z-10">
-        <button
-          className="bg-white p-2 border border-solid border-gray-300"
-          onClick={handleGetProject}
-        >
-          Load project
-        </button>
+      <div className="absolute flex gap-5 top-[10px] left-[10px] z-10 bg-white p-[20px] flex-col">
+        {projectList && (
+          <ProjectSelector data={projectList} onSelect={handleProjectSelect} />
+        )}
+
+        {projectList && projectId && (
+          <ProjectInfo
+            project={projectList.find((project) => project.id === projectId)!}
+          />
+        )}
+
         <button
           className="bg-white p-2 border border-solid border-gray-300"
           onClick={handleSaveProject}
