@@ -1,8 +1,12 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
-import mapboxgl, { Map } from "mapbox-gl";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import mapboxgl, { Map, MapboxEvent } from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
-import MapboxDraw from "@mapbox/mapbox-gl-draw";
+import MapboxDraw, {
+  DrawEvent,
+  DrawEventType,
+  DrawSelectionChangeEvent,
+} from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import bbox from "@turf/bbox";
 import { ProjectSelector } from "../ProjectSelector";
@@ -24,6 +28,17 @@ export interface ProjectData {
   project: Project;
 }
 
+export interface HazardType {
+  id: number;
+  name: string;
+}
+
+export interface UpdatePolygonData {
+  polygonId: string;
+  polygonPropName: string;
+  value: string | number;
+}
+
 export function MapboxGLMap(): JSX.Element {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -34,11 +49,14 @@ export function MapboxGLMap(): JSX.Element {
   const [projectData, setProjectData] = useState<ProjectData>(
     {} as ProjectData
   );
-
+  //layers
   const [regionsChecked, setRegionsChecked] = useState(true);
   const [districtsChecked, setDistrictsChecked] = useState(true);
   const [polygonObjectsChecked, setPolygonObjectsChecked] = useState(true);
+  const [kadastrChecked, setKadastrChecked] = useState(false);
+
   const [polygonData, setPolygonData] = useState<PolygonData>();
+  const [hazardTypes, setHazardTypes] = useState<HazardType[]>([]);
 
   useEffect(() => {
     mapboxgl.accessToken =
@@ -67,6 +85,24 @@ export function MapboxGLMap(): JSX.Element {
       drawRef.current = draw;
 
       console.log("map", map);
+
+      map.addSource("kadastr", {
+        type: "raster",
+        tiles: [
+          "https://cdn.kadastr.live/tiles/raster/styles/parcels/{z}/{x}/{y}.png",
+        ],
+      });
+      map.addLayer({
+        id: "kadastr",
+        type: "raster",
+        source: "kadastr",
+        layout: {
+          visibility: kadastrChecked ? "visible" : "none",
+        },
+
+        minzoom: 0,
+        maxzoom: 22,
+      });
 
       map.addSource("address__district", {
         type: "vector",
@@ -127,11 +163,33 @@ export function MapboxGLMap(): JSX.Element {
     });
 
     getUserProjects();
-
-    return () => {
-      map.remove();
-    };
   }, []);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    mapRef.current.on("draw.selectionchange", handlePolygonSelection);
+    return () => {
+      mapRef.current?.off("draw.selectionchange", handlePolygonSelection);
+    };
+  }, [projectData]);
+
+  const handlePolygonSelection = (e: DrawSelectionChangeEvent) => {
+    console.log("draw.selectionchange", e);
+    console.log("project data", projectData);
+    if (!e.features[0] || !e.features[0].id) return;
+
+    // const selectedFeatures = e.features;
+    // const id = selectedFeatures[0].id;
+    // const polygonProps = projectData.objects.features.find((d) => d.id === id);
+    // console.log("polygonProps", polygonProps);
+
+    const data = drawRef.current
+      ?.getAll()
+      .features.find((d) => d.id === e.features[0].id);
+    console.log("data", data);
+
+    data && data.properties && setPolygonData(data.properties as PolygonData);
+  };
 
   const handleGetProject = (projectId: number) => {
     console.log("projectId", projectId, !projectId, !isNaN(projectId));
@@ -156,25 +214,25 @@ export function MapboxGLMap(): JSX.Element {
             speed: 4,
           });
         }
-
         setProjectData(data);
       });
   };
 
+  useEffect(() => {
+    console.log("!!!!!!!!projectData!!!!!!!!!");
+    console.log(projectData);
+    console.log("!!!!!!!!!!!!!!!!!");
+
+    //UPDATE DRAW DATA
+    //  drawRef.current?.deleteAll();
+    //  drawRef.current?.set(projectData.objects);
+  }, [projectData]);
+
   const handleSaveProject = () => {
     if (!drawRef.current) return;
     const draw = drawRef.current;
-
     const drawData = draw.getAll();
     //remove id from features
-    const geometry = drawData.features.map(({ id, ...rest }) => {
-      return {
-        id: null,
-        ...rest,
-      };
-    });
-
-    console.log("geometry", geometry);
 
     const postData = {
       id: projectId,
@@ -182,12 +240,17 @@ export function MapboxGLMap(): JSX.Element {
         project: projectData.project,
         objects: {
           type: "FeatureCollection",
-          features: geometry,
+          features: drawData.features.map(({ id, ...rest }) => {
+            return {
+              id: null,
+              ...rest,
+            };
+          }),
         },
       },
     };
 
-    console.log("postData", postData);
+    console.log("postData---->>>>", postData);
 
     fetch("http://135.181.151.145:8000/set_project/", {
       method: "POST",
@@ -219,6 +282,24 @@ export function MapboxGLMap(): JSX.Element {
       .then((data) => {
         console.log("data", data);
         setProjectList(data);
+      });
+
+    const hazard = {
+      schema: "data",
+      table: "hazard_type",
+      fields: "id, name",
+    };
+    fetch("http://135.181.151.145:8000/get_table_json/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(hazard),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("data", data);
+        setHazardTypes(data);
       });
   };
 
@@ -254,10 +335,51 @@ export function MapboxGLMap(): JSX.Element {
     const checked = e.target.checked;
     setPolygonObjectsChecked(checked);
     mapRef.current?.setLayoutProperty(
-      "address__district",
+      "address__object",
       "visibility",
       checked ? "visible" : "none"
     );
+  };
+
+  const handleKadastrObjectsVisibility = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const checked = e.target.checked;
+    setKadastrChecked(checked);
+    mapRef.current?.setLayoutProperty(
+      "kadastr",
+      "visibility",
+      checked ? "visible" : "none"
+    );
+  };
+
+  const updateProjectPolygonData = ({
+    polygonId,
+    polygonPropName,
+    value,
+  }: UpdatePolygonData) => {
+    if (!polygonData) return;
+
+    console.log(polygonId, polygonPropName, value);
+
+    if (!drawRef.current) return;
+    drawRef.current.setFeatureProperty(polygonId, polygonPropName, value);
+
+    // projectData.objects.features.forEach((feature) => {
+    //   if (feature.id === polygonId) {
+    //     feature.properties && (feature.properties[polygonPropName] = value);
+    //   }
+    // });
+
+    // console.log("projectData", projectData);
+    // const newProjectData = {
+    //   ...projectData,
+    //   objects: {
+    //     ...projectData.objects,
+    //     features: [...projectData.objects.features],
+    //   },
+    // };
+    // setProjectData(newProjectData);
   };
 
   return (
@@ -273,7 +395,13 @@ export function MapboxGLMap(): JSX.Element {
           />
         )}
 
-        {polygonData && <PolygonInfoBox polygonData={polygonData} />}
+        {polygonData && (
+          <PolygonInfoBox
+            polygonData={polygonData}
+            hazardTypes={hazardTypes}
+            updatePolygonData={updateProjectPolygonData}
+          />
+        )}
 
         <button
           className="bg-white p-2 border border-solid border-gray-300"
@@ -325,6 +453,21 @@ export function MapboxGLMap(): JSX.Element {
             className="pl-2 cursor-pointer user-select-none"
           >
             Polygon Objects
+          </label>
+        </div>
+
+        <div className="m-[10px]">
+          <input
+            type="checkbox"
+            id="kadastr"
+            checked={kadastrChecked}
+            onChange={handleKadastrObjectsVisibility}
+          />
+          <label
+            htmlFor="kadastr"
+            className="pl-2 cursor-pointer user-select-none"
+          >
+            Kadastr
           </label>
         </div>
       </div>
