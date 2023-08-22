@@ -365,6 +365,12 @@ export function MapboxGLMap(): JSX.Element {
     if (!drawRef.current) return;
     drawRef.current.setFeatureProperty(polygonId, polygonPropName, value);
 
+    //update polygon data with new props
+    const data = drawRef.current
+      ?.getAll()
+      .features.find((d) => d.id === polygonId);
+    data && data.properties && setPolygonData(data.properties as PolygonData);
+
     // projectData.objects.features.forEach((feature) => {
     //   if (feature.id === polygonId) {
     //     feature.properties && (feature.properties[polygonPropName] = value);
