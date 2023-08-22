@@ -6,8 +6,8 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import bbox from "@turf/bbox";
 import { ProjectSelector } from "../ProjectSelector";
-import { profileEnd } from "console";
 import { ProjectInfo } from "@/components/ProjectInfo";
+import { FeatureCollection } from "geojson";
 
 export interface Project {
   id: number;
@@ -18,6 +18,11 @@ export interface Project {
   is_active?: boolean;
 }
 
+export interface ProjectData {
+  objects: FeatureCollection;
+  project: Project;
+}
+
 export function MapboxGLMap(): JSX.Element {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
@@ -25,6 +30,9 @@ export function MapboxGLMap(): JSX.Element {
 
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [projectId, setProjectId] = useState<number | null>(null);
+  const [projectData, setProjectData] = useState<ProjectData>(
+    {} as ProjectData
+  );
 
   useEffect(() => {
     mapboxgl.accessToken =
@@ -122,12 +130,12 @@ export function MapboxGLMap(): JSX.Element {
             speed: 4,
           });
         }
+
+        setProjectData(data);
       });
   };
 
   const handleSaveProject = () => {
-    const projectId = 2;
-
     if (!drawRef.current) return;
     const draw = drawRef.current;
 
@@ -135,6 +143,7 @@ export function MapboxGLMap(): JSX.Element {
     //remove id from features
     const geometry = drawData.features.map(({ id, ...rest }) => {
       return {
+        id: null,
         ...rest,
       };
     });
@@ -144,14 +153,7 @@ export function MapboxGLMap(): JSX.Element {
     const postData = {
       id: projectId,
       params: {
-        project: {
-          id: projectId,
-          uuid: "ea24e437-8a3b-4c6a-abb9-b8783a450d4a",
-          organization_id: 1,
-          name: "Project 2",
-          description: "description for project 2",
-          is_active: true,
-        },
+        project: projectData.project,
         objects: {
           ...geometry,
         },
