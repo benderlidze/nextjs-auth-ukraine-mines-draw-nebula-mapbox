@@ -8,6 +8,7 @@ import bbox from "@turf/bbox";
 import { ProjectSelector } from "../ProjectSelector";
 import { ProjectInfo } from "@/components/ProjectInfo";
 import { FeatureCollection } from "geojson";
+import { PolygonData, PolygonInfoBox } from "../PolygonInfoBox";
 
 export interface Project {
   id: number;
@@ -36,13 +37,15 @@ export function MapboxGLMap(): JSX.Element {
 
   const [regionsChecked, setRegionsChecked] = useState(true);
   const [districtsChecked, setDistrictsChecked] = useState(true);
+  const [polygonObjectsChecked, setPolygonObjectsChecked] = useState(true);
+  const [polygonData, setPolygonData] = useState<PolygonData>();
 
   useEffect(() => {
     mapboxgl.accessToken =
       "pk.eyJ1IjoiY2NoYW5nc2EiLCJhIjoiY2lqeXU3dGo1MjY1ZXZibHp5cHF2a3Q1ZyJ9.8q-mw77HsgkdqrUHdi-XUg"; // Replace with your Mapbox access token
     const map = new mapboxgl.Map({
       container: mapContainerRef.current!,
-      style: "mapbox://styles/mapbox/light-v11", // Choose your desired map style
+      style: "mapbox://styles/mapbox/streets-v12", // Choose your desired map style
       center: [31.171318441368896, 49.38952608677255], // Initial center coordinates
       zoom: 5, // Initial zoom level
       projection: { name: "mercator" } as mapboxgl.Projection,
@@ -65,6 +68,25 @@ export function MapboxGLMap(): JSX.Element {
 
       console.log("map", map);
 
+      map.addSource("address__district", {
+        type: "vector",
+        tiles: [
+          "http://135.181.151.145:8000/get_tile/{z}/{x}/{y}/address__district/",
+        ],
+      });
+      map.addLayer({
+        id: "address__district",
+        type: "line",
+        layout: {
+          visibility: "visible",
+        },
+        source: "address__district",
+        "source-layer": "address__district",
+        paint: {
+          "line-color": "rgba(200, 100, 240, 5)",
+        },
+      });
+
       map.addSource("address__region", {
         type: "vector",
         tiles: [
@@ -74,34 +96,29 @@ export function MapboxGLMap(): JSX.Element {
       });
       map.addLayer({
         id: "address__region",
-        type: "fill",
+        type: "line",
         source: "address__region",
         "source-layer": "address__region",
         layout: {
           visibility: "visible",
         },
         paint: {
-          "fill-color": "rgba(200, 100, 240, 0.1)",
-          "fill-outline-color": "rgba(200, 100, 240, 1)",
+          "line-color": "black",
         },
       });
 
-      map.addSource("address__district", {
+      map.addSource("address__object", {
         type: "vector",
-        tiles: [
-          "http://135.181.151.145:8000/get_tile/{z}/{x}/{y}/address__district/",
-        ],
-        minzoom: 7,
-        maxzoom: 22,
+        tiles: ["http://135.181.151.145:8000/get_tile/{z}/{x}/{y}/object/"],
       });
       map.addLayer({
-        id: "address__district",
+        id: "address__object",
         type: "fill",
         layout: {
           visibility: "visible",
         },
-        source: "address__district",
-        "source-layer": "address__district",
+        source: "address__object",
+        "source-layer": "object",
         paint: {
           "fill-color": "rgba(200, 100, 240, 0.1)",
           "fill-outline-color": "rgba(200, 100, 240, 1)",
@@ -231,6 +248,17 @@ export function MapboxGLMap(): JSX.Element {
       checked ? "visible" : "none"
     );
   };
+  const handlePolygonObjectsVisibility = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const checked = e.target.checked;
+    setPolygonObjectsChecked(checked);
+    mapRef.current?.setLayoutProperty(
+      "address__district",
+      "visibility",
+      checked ? "visible" : "none"
+    );
+  };
 
   return (
     <div>
@@ -244,6 +272,8 @@ export function MapboxGLMap(): JSX.Element {
             project={projectList.find((project) => project.id === projectId)!}
           />
         )}
+
+        {polygonData && <PolygonInfoBox polygonData={polygonData} />}
 
         <button
           className="bg-white p-2 border border-solid border-gray-300"
@@ -280,6 +310,21 @@ export function MapboxGLMap(): JSX.Element {
             className="pl-2 cursor-pointer user-select-none"
           >
             Districts
+          </label>
+        </div>
+
+        <div className="m-[10px]">
+          <input
+            type="checkbox"
+            id="polygons"
+            checked={polygonObjectsChecked}
+            onChange={handlePolygonObjectsVisibility}
+          />
+          <label
+            htmlFor="polygons"
+            className="pl-2 cursor-pointer user-select-none"
+          >
+            Polygon Objects
           </label>
         </div>
       </div>
