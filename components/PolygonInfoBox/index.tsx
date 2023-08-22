@@ -13,6 +13,7 @@ interface PolygonDataProps {
 }
 
 export interface PolygonData {
+  id: number;
   hazard_type_id: number;
   status_id: number;
 }

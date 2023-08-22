@@ -58,6 +58,7 @@ export function MapboxGLMap(): JSX.Element {
   const [districtsChecked, setDistrictsChecked] = useState(true);
   const [polygonObjectsChecked, setPolygonObjectsChecked] = useState(true);
   const [kadastrChecked, setKadastrChecked] = useState(false);
+  const [satelliteChecked, setSatelliteChecked] = useState(false);
 
   const [polygonData, setPolygonData] = useState<PolygonData>();
   const [hazardTypes, setHazardTypes] = useState<HazardType[]>([]);
@@ -90,6 +91,23 @@ export function MapboxGLMap(): JSX.Element {
       drawRef.current = draw;
 
       console.log("map", map);
+
+      map.addSource("satellite", {
+        type: "raster",
+        tiles: [
+          "https://api.mapbox.com/styles/v1/mapbox/satellite-streets-v10/tiles/{z}/{x}/{y}?access_token=" +
+            mapboxgl.accessToken,
+        ],
+      });
+
+      map.addLayer({
+        id: "satellite",
+        type: "raster",
+        source: "satellite",
+        layout: {
+          visibility: satelliteChecked ? "visible" : "none",
+        },
+      });
 
       map.addSource("kadastr", {
         type: "raster",
@@ -181,19 +199,15 @@ export function MapboxGLMap(): JSX.Element {
   const handlePolygonSelection = (e: DrawSelectionChangeEvent) => {
     console.log("draw.selectionchange", e);
     console.log("project data", projectData);
-    if (!e.features[0] || !e.features[0].id) return;
-
-    // const selectedFeatures = e.features;
-    // const id = selectedFeatures[0].id;
-    // const polygonProps = projectData.objects.features.find((d) => d.id === id);
-    // console.log("polygonProps", polygonProps);
-
-    const data = drawRef.current
-      ?.getAll()
-      .features.find((d) => d.id === e.features[0].id);
-    console.log("data", data);
-
-    data && data.properties && setPolygonData(data.properties as PolygonData);
+    if (!e.features[0] || !e.features[0].id) {
+      setPolygonData({} as PolygonData);
+    } else {
+      const data = drawRef.current
+        ?.getAll()
+        .features.find((d) => d.id === e.features[0].id);
+      console.log("data", data);
+      data && data.properties && setPolygonData(data.properties as PolygonData);
+    }
   };
 
   const handleGetProject = (projectId: number) => {
@@ -376,6 +390,18 @@ export function MapboxGLMap(): JSX.Element {
     );
   };
 
+  const handleSatelliteVisibility = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const checked = e.target.checked;
+    setSatelliteChecked(checked);
+    mapRef.current?.setLayoutProperty(
+      "satellite",
+      "visibility",
+      checked ? "visible" : "none"
+    );
+  };
+
   const updateProjectPolygonData = ({
     polygonId,
     polygonPropName,
@@ -383,7 +409,7 @@ export function MapboxGLMap(): JSX.Element {
   }: UpdatePolygonData) => {
     if (!polygonData) return;
 
-    console.log("Update polygon data -> ",polygonId, polygonPropName, value);
+    console.log("Update polygon data -> ", polygonId, polygonPropName, value);
 
     if (!drawRef.current) return;
     drawRef.current.setFeatureProperty(polygonId, polygonPropName, value);
@@ -411,9 +437,16 @@ export function MapboxGLMap(): JSX.Element {
     // setProjectData(newProjectData);
   };
 
+  console.log("polygonData", polygonData);
   return (
     <div>
-      <div className="absolute flex gap-5 top-[10px] left-[10px] z-10 bg-white p-[20px] flex-col">
+      <div
+        style={{
+          boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 20px",
+          backgroundColor: "#f5f5fb",
+        }}
+        className="absolute flex gap-5 top-[10px] left-[10px] z-10 bg-white p-[20px] flex-col"
+      >
         {projectList && (
           <ProjectSelector data={projectList} onSelect={handleProjectSelect} />
         )}
@@ -424,7 +457,7 @@ export function MapboxGLMap(): JSX.Element {
           />
         )}
 
-        {polygonData && (
+        {polygonData && polygonData?.id && (
           <PolygonInfoBox
             polygonData={polygonData}
             hazardTypes={hazardTypes}
@@ -441,7 +474,13 @@ export function MapboxGLMap(): JSX.Element {
         </button>
       </div>
 
-      <div className="absolute bottom-[10px] left-[10px] z-10 bg-white p-[20px]">
+      <div
+        style={{
+          boxShadow: "rgba(0, 0, 0, 0.1) 0px 4px 20px",
+          backgroundColor: "#f5f5fb",
+        }}
+        className="absolute bottom-[10px] left-[10px] z-10 bg-white p-[20px]"
+      >
         <div className="m-[10px]">
           <input
             type="checkbox"
@@ -498,6 +537,21 @@ export function MapboxGLMap(): JSX.Element {
             className="pl-2 cursor-pointer user-select-none"
           >
             Kadastr
+          </label>
+        </div>
+
+        <div className="m-[10px]">
+          <input
+            type="checkbox"
+            id="satellite"
+            checked={satelliteChecked}
+            onChange={handleSatelliteVisibility}
+          />
+          <label
+            htmlFor="satellite"
+            className="pl-2 cursor-pointer user-select-none"
+          >
+            Satellite
           </label>
         </div>
       </div>
