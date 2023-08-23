@@ -13,6 +13,8 @@ import { ProjectSelector } from "../ProjectSelector";
 import { ProjectInfo } from "@/components/ProjectInfo";
 import { FeatureCollection } from "geojson";
 import { PolygonData, PolygonInfoBox } from "../PolygonInfoBox";
+import { useSession } from "next-auth/react";
+import SignOut from "../sign-out";
 
 export interface Project {
   id: number;
@@ -44,6 +46,9 @@ export interface UpdatePolygonData {
 }
 
 export function MapboxGLMap(): JSX.Element {
+  const user = useSession();
+  console.log("user", user);
+
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<Map | null>(null);
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -538,6 +543,18 @@ export function MapboxGLMap(): JSX.Element {
         />
         <div style={{ width: "300px" }}>
           <div className="flex gap-5 p-4 flex-col">
+            <div>
+              {user && user.status === "authenticated" && (
+                <div>
+                  {
+                    // @ts-ignore
+                    user.data.session.user.login
+                  }
+                  <SignOut />
+                </div>
+              )}
+            </div>
+
             {projectList && (
               <ProjectSelector
                 data={projectList}
