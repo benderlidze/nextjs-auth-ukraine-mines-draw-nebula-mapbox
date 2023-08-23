@@ -31,7 +31,7 @@ export const PolygonInfoBox = ({
   return (
     <div>
       <h1>Polygon Info</h1>
-      Description:
+      <div className="mt-4">Description:</div>
       <textarea
         className="block w-full p-2 border rounded shadow-sm focus:outline-none focus:ring focus:border-blue-300"
         name="description"
@@ -46,7 +46,7 @@ export const PolygonInfoBox = ({
           });
         }}
       />
-      <p>Hazard Type:</p>
+      <div className="mt-4">Hazard Type:</div>
       <select
         className="block w-full p-2 border rounded shadow-sm focus:outline-none focus:ring focus:border-blue-300"
         name="hazard_type"
@@ -70,7 +70,7 @@ export const PolygonInfoBox = ({
           </option>
         ))}
       </select>
-      <p>Status:</p>
+      <div className="mt-4">Status:</div>
       <select
         className="block w-full p-2 border rounded shadow-sm focus:outline-none focus:ring focus:border-blue-300"
         name="status_type"
